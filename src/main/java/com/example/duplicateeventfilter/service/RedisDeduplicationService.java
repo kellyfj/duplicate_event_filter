@@ -2,7 +2,8 @@ package com.example.duplicateeventfilter.service;
 
 import com.example.duplicateeventfilter.exception.DeduplicationStoreUnavailableException;
 import com.example.duplicateeventfilter.model.EventRequest;
-import lombok.RequiredArgsConstructor;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.RedisConnectionFailureException;
@@ -17,7 +18,6 @@ import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class RedisDeduplicationService implements DeduplicationService {
 
     private static final long BUCKET_SIZE_SECONDS = 900L;
@@ -25,6 +25,14 @@ public class RedisDeduplicationService implements DeduplicationService {
     private static final String SENTINEL_VALUE = "1";
 
     private final StringRedisTemplate redisTemplate;
+    private final Counter acceptedCounter;
+    private final Counter deduplicatedCounter;
+
+    public RedisDeduplicationService(StringRedisTemplate redisTemplate, MeterRegistry meterRegistry) {
+        this.redisTemplate = redisTemplate;
+        this.acceptedCounter = meterRegistry.counter("events.accepted.total");
+        this.deduplicatedCounter = meterRegistry.counter("events.deduplicated.total");
+    }
 
     @Value("${app.deduplication.ttl-seconds:900}")
     private long ttlSeconds;
@@ -40,8 +48,10 @@ public class RedisDeduplicationService implements DeduplicationService {
 
             boolean duplicate = !Boolean.TRUE.equals(isNew);
             if (duplicate) {
+                deduplicatedCounter.increment();
                 log.info("action=dedup_check outcome=duplicate dedupKey={}", hashedKey);
             } else {
+                acceptedCounter.increment();
                 log.info("action=dedup_check outcome=accepted dedupKey={}", hashedKey);
             }
             return duplicate;
