@@ -2,10 +2,10 @@ package com.example.duplicateeventfilter.service;
 
 import com.example.duplicateeventfilter.exception.DeduplicationStoreUnavailableException;
 import com.example.duplicateeventfilter.model.EventRequest;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.redis.RedisConnectionFailureException;
@@ -34,13 +34,13 @@ class RedisDeduplicationServiceTest {
     @Mock
     private ValueOperations<String, String> valueOperations;
 
-    @InjectMocks
     private RedisDeduplicationService service;
 
     private EventRequest event;
 
     @BeforeEach
     void setUp() {
+        service = new RedisDeduplicationService(redisTemplate, new SimpleMeterRegistry());
         ReflectionTestUtils.setField(service, "ttlSeconds", 900L);
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
 
