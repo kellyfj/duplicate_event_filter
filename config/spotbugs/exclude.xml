@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FindBugsFilter
+    xmlns="https://github.com/spotbugs/filter/3.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="https://github.com/spotbugs/filter/3.0.0 https://raw.githubusercontent.com/spotbugs/spotbugs/3.1.0/spotbugs/etc/findbugsfilter.xsd">
+
+    <!-- Suppress all bugs in OpenAPI-generated API classes -->
+    <Match>
+        <Class name="~com\.example\.duplicateeventfilter\.api\..*"/>
+        <Bug/>
+    </Match>
+
+    <!-- Suppress NP bug in OpenAPI-generated ApiUtil (generated code, not hand-written) -->
+    <Match>
+        <Class name="com.example.duplicateeventfilter.api.ApiUtil"/>
+        <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"/>
+    </Match>
+
+    <!-- Suppress mutable exposure bugs in OpenAPI-generated model classes -->
+    <Match>
+        <Package name="~com\.example\.duplicateeventfilter\.model(\..+)?"/>
+        <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+    </Match>
+
+    <!-- Suppress mutable exposure bugs in controller classes (Spring-managed beans) -->
+    <Match>
+        <Package name="~com\.example\.duplicateeventfilter\.controller(\..+)?"/>
+        <Bug pattern="EI_EXPOSE_REP2"/>
+    </Match>
+    <!-- Suppress EI_EXPOSE_REP2 for service classes — Spring-injected beans are managed by Spring -->
+    <Match>
+        <Package name="~com\.example\.duplicateeventfilter\.service(\..*)?" />
+        <Bug pattern="EI_EXPOSE_REP2"/>
+    </Match>
+</FindBugsFilter>

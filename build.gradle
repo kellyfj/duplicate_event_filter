@@ -1,0 +1,160 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '3.3.5'
+    id 'io.spring.dependency-management' version '1.1.6'
+    id 'checkstyle'
+    id 'com.github.spotbugs' version '6.0.9'
+    id 'jacoco'
+    id 'org.openapi.generator' version '7.6.0'
+}
+
+group = 'com.example'
+version = '0.0.1-SNAPSHOT'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+}
+
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+
+    // OpenAPI generated code support
+    implementation 'io.swagger.core.v3:swagger-annotations:2.2.22'
+
+    // Structured JSON logging
+    implementation 'net.logstash.logback:logstash-logback-encoder:7.4'
+
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testCompileOnly 'org.projectlombok:lombok'
+    testAnnotationProcessor 'org.projectlombok:lombok'
+}
+
+// ---------------------------------------------------------------------------
+// OpenAPI Generator
+// ---------------------------------------------------------------------------
+openApiGenerate {
+    generatorName = 'spring'
+    inputSpec = "$projectDir/src/main/resources/openapi.yaml"
+    outputDir = "$buildDir/generated"
+    apiPackage = 'com.example.duplicateeventfilter.api'
+    modelPackage = 'com.example.duplicateeventfilter.model'
+    configOptions = [
+        interfaceOnly       : 'true',
+        useSpringBoot3      : 'true',
+        useBeanValidation   : 'true',
+        useOptional         : 'false',
+        dateLibrary         : 'java8',
+        openApiNullable     : 'false',
+        skipDefaultInterface: 'true'
+    ]
+}
+
+compileJava.dependsOn tasks.openApiGenerate
+
+sourceSets {
+    main {
+        java {
+            srcDirs += "$buildDir/generated/src/main/java"
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// JaCoCo
+// ---------------------------------------------------------------------------
+jacoco {
+    toolVersion = '0.8.12'
+}
+
+def excludedGeneratedClasses = [
+    'com/example/duplicateeventfilter/model/**',
+    'com/example/duplicateeventfilter/api/**',
+    'com/example/duplicateeventfilter/DuplicateEventFilterApplication.class'
+]
+
+jacocoTestReport {
+    dependsOn test
+    reports {
+        xml.required = true
+        html.required = true
+    }
+    afterEvaluate {
+        classDirectories.setFrom(files(classDirectories.files.collect {
+            fileTree(dir: it, exclude: excludedGeneratedClasses)
+        }))
+    }
+}
+
+jacocoTestCoverageVerification {
+    violationRules {
+        rule {
+            limit {
+                minimum = 0.80
+            }
+        }
+    }
+    afterEvaluate {
+        classDirectories.setFrom(files(classDirectories.files.collect {
+            fileTree(dir: it, exclude: excludedGeneratedClasses)
+        }))
+    }
+}
+
+test {
+    useJUnitPlatform()
+    finalizedBy jacocoTestReport
+}
+
+check.dependsOn jacocoTestCoverageVerification
+check.dependsOn checkstyleMain
+check.dependsOn checkstyleTest
+check.dependsOn spotbugsMain
+
+// ---------------------------------------------------------------------------
+// Checkstyle
+// ---------------------------------------------------------------------------
+checkstyle {
+    toolVersion = '10.12.1'
+    configFile = file('config/checkstyle/checkstyle.xml')
+}
+
+// Only check hand-written sources — exclude OpenAPI-generated code
+checkstyleMain {
+    source = fileTree('src/main/java')
+}
+
+checkstyleTest {
+    source = fileTree('src/test/java')
+}
+
+// ---------------------------------------------------------------------------
+// SpotBugs
+// ---------------------------------------------------------------------------
+spotbugs {
+    excludeFilter = file('config/spotbugs/exclude.xml')
+}
+
+spotbugsMain {
+    reports {
+        html {
+            required = true
+        }
+    }
+}
